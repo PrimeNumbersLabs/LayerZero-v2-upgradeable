@@ -10,7 +10,7 @@ import { ONFT721CoreUpgradeable } from "./ONFT721CoreUpgradeable.sol";
  * @title ONFT721Enumerable Contract
  * @dev ONFT721 is an ERC-721 token that extends the functionality of the ONFT721Core contract.
  */
-abstract contract ONFT721EnumerableUpgradeable is ONFT721CoreUpgradeable, ERC721EnumerableUpgradeable {
+abstract contract ONFT721EnumerableUpgradeable is ONFT721CoreUpgradeable, ERC721Upgradeable, ERC721EnumerableUpgradeable {
     struct ONFT721EnumerableStorage {
         string baseTokenURI;
     }
@@ -39,8 +39,9 @@ abstract contract ONFT721EnumerableUpgradeable is ONFT721CoreUpgradeable, ERC721
         address _lzEndpoint,
         address _delegate
     ) internal onlyInitializing {
-        __ERC721_init(_name, _symbol);
         __ONFT721Core_init(_lzEndpoint, _delegate);
+        __ERC721_init(_name, _symbol);
+        __ERC721Enumerable_init();
     }
 
     /**
@@ -77,5 +78,29 @@ abstract contract ONFT721EnumerableUpgradeable is ONFT721CoreUpgradeable, ERC721
 
     function _credit(address _to, uint256 _tokenId, uint32 /*_srcEid*/) internal virtual override {
         _mint(_to, _tokenId);
+    }
+
+    function _update(address to, uint256 tokenId, address auth)
+        internal
+        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+        returns (address)
+    {
+        return super._update(to, tokenId, auth);
+    }
+
+    function _increaseBalance(address account, uint128 value)
+        internal
+        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+    {
+        super._increaseBalance(account, value);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 }

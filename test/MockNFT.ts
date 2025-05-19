@@ -100,6 +100,81 @@ describe("MockNFT (MyONFT721) Tests", function () {
     });
   });
 
+  describe("Enumerable features", function () {
+    it("should track token by index", async function () {
+      const userAddress = await user1.getAddress();
+      
+      // Mint multiple tokens
+      await myONFT721.mint(userAddress, 1);
+      await myONFT721.mint(userAddress, 2);
+      await myONFT721.mint(userAddress, 3);
+      
+      // Check token by index
+      expect(await myONFT721.tokenByIndex(0)).to.equal(1);
+      expect(await myONFT721.tokenByIndex(1)).to.equal(2);
+      expect(await myONFT721.tokenByIndex(2)).to.equal(3);
+      
+      // Check total supply
+      expect(await myONFT721.totalSupply()).to.equal(3);
+    });
+    
+    it("should track tokens of owner by index", async function () {
+      const user1Address = await user1.getAddress();
+      const user2Address = await user2.getAddress();
+      
+      // Mint tokens to different users
+      await myONFT721.mint(user1Address, 1);
+      await myONFT721.mint(user2Address, 2);
+      await myONFT721.mint(user1Address, 3);
+      
+      // Check tokens of owner by index
+      expect(await myONFT721.tokenOfOwnerByIndex(user1Address, 0)).to.equal(1);
+      expect(await myONFT721.tokenOfOwnerByIndex(user1Address, 1)).to.equal(3);
+      expect(await myONFT721.tokenOfOwnerByIndex(user2Address, 0)).to.equal(2);
+      
+      // Check balances
+      expect(await myONFT721.balanceOf(user1Address)).to.equal(2);
+      expect(await myONFT721.balanceOf(user2Address)).to.equal(1);
+    });
+    
+    it("should handle base URI correctly", async function () {
+      const baseURI = "https://api.example.com/tokens/";
+      const tokenId = 1;
+      const userAddress = await user1.getAddress();
+      
+      // Mint a token
+      await myONFT721.mint(userAddress, tokenId);
+      
+      // Set base URI
+      await myONFT721.setBaseURI(baseURI);
+      
+      // Check token URI
+      expect(await myONFT721.tokenURI(tokenId)).to.equal(`${baseURI}${tokenId}`);
+    });
+    
+    it("should maintain enumerable state after transfer", async function () {
+      const user1Address = await user1.getAddress();
+      const user2Address = await user2.getAddress();
+      const tokenId = 1;
+      
+      // Mint token to user1
+      await myONFT721.mint(user1Address, tokenId);
+      
+      // Transfer token from user1 to user2
+      await myONFT721.connect(user1).transferFrom(user1Address, user2Address, tokenId);
+      
+      // Check token ownership
+      expect(await myONFT721.ownerOf(tokenId)).to.equal(user2Address);
+      
+      // Check enumerable state
+      expect(await myONFT721.tokenOfOwnerByIndex(user2Address, 0)).to.equal(tokenId);
+      expect(await myONFT721.tokenByIndex(0)).to.equal(tokenId);
+      expect(await myONFT721.totalSupply()).to.equal(1);
+      expect(await myONFT721.balanceOf(user1Address)).to.equal(0);
+      expect(await myONFT721.balanceOf(user2Address)).to.equal(1);
+    });
+  });
+
   describe("Upgradeable pattern", function () {
     it("should be upgradeable to a new implementation", async function () {
       // Deploy a new implementation of MyONFT721
