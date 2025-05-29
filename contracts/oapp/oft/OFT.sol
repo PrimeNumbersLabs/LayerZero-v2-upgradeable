@@ -2,14 +2,14 @@
 
 pragma solidity ^0.8.20;
 
-import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import { IOFTUpgradeable, OFTCoreUpgradeable } from "./OFTCoreUpgradeable.sol";
+import { SolidStateERC20 } from "@solidstate/contracts/token/ERC20/SolidStateERC20.sol";
+import { IOFT, OFTCore } from "./OFTCore.sol";
 
 /**
  * @title OFT Contract
  * @dev OFT is an ERC-20 token that extends the functionality of the OFTCore contract.
  */
-abstract contract OFTUpgradeable is OFTCoreUpgradeable, ERC20Upgradeable {
+abstract contract OFT is OFTCore, SolidStateERC20 {
     /**
      * @dev Constructor for the OFT contract.
      * @param _name The name of the OFT.

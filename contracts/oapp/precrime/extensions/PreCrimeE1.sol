@@ -6,14 +6,14 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import { ILayerZeroEndpoint } from "@layerzerolabs/lz-evm-v1-0.7/contracts/interfaces/ILayerZeroEndpoint.sol";
 
-import { PreCrimeUpgradeable } from "../PreCrimeUpgradeable.sol";
+import { PreCrime } from "../PreCrime.sol";
 
-abstract contract PreCrimeE1Upgradeable is PreCrimeUpgradeable {
+abstract contract PreCrimeE1 is PreCrime {
     using SafeCast for uint32;
 
     uint32 internal immutable localEid;
 
-    constructor(uint32 _localEid, address _endpoint, address _simulator) PreCrimeUpgradeable(_endpoint, _simulator) {
+    constructor(uint32 _localEid, address _endpoint, address _simulator) PreCrime(_endpoint, _simulator) {
         localEid = _localEid;
     }
 

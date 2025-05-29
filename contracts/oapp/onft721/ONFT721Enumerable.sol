@@ -2,27 +2,15 @@
 
 pragma solidity ^0.8.22;
 
-import { ERC721EnumerableUpgradeable, ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import { SolidStateERC721 } from "@solidstate/contracts/token/ERC721/SolidStateERC721.sol";
 
-import { ONFT721CoreUpgradeable } from "./ONFT721CoreUpgradeable.sol";
+import { ONFT721Core } from "./ONFT721Core.sol";
 
 /**
  * @title ONFT721Enumerable Contract
  * @dev ONFT721 is an ERC-721 token that extends the functionality of the ONFT721Core contract.
  */
-abstract contract ONFT721EnumerableUpgradeable is ONFT721CoreUpgradeable, ERC721EnumerableUpgradeable {
-    struct ONFT721EnumerableStorage {
-        string baseTokenURI;
-    }
-
-    // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.onft721enumerable")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant ONFT721EnumerableStorageLocation = 0x85fe181c183f62f4c3645b58cc89f6b95a0f60bbf7704c33df5b2a7606e50b00;
-
-    function _getONFT721EnumerableStorage() internal pure returns (ONFT721EnumerableStorage storage ds) {
-        assembly {
-            ds.slot := ONFT721EnumerableStorageLocation
-        }
-    }
+abstract contract ONFT721Enumerable is ONFT721Core, SolidStateERC721 {
 
     event BaseURISet(string baseURI);
 
@@ -71,7 +59,7 @@ abstract contract ONFT721EnumerableUpgradeable is ONFT721CoreUpgradeable, ERC721
     }
 
     function _debit(address _from, uint256 _tokenId, uint32 /*_dstEid*/) internal virtual override {
-        if (_from != ERC721Upgradeable.ownerOf(_tokenId)) revert OnlyNFTOwner(_from, ERC721Upgradeable.ownerOf(_tokenId));
+        if (_from != ERC721.ownerOf(_tokenId)) revert OnlyNFTOwner(_from, ERC721.ownerOf(_tokenId));
         _burn(_tokenId);
     }
 

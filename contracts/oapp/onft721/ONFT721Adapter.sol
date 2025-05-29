@@ -3,9 +3,9 @@
 pragma solidity ^0.8.22;
 
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { ONFT721CoreUpgradeable } from "./ONFT721CoreUpgradeable.sol";
+import {Context} from "@openzeppelin/contracts-/utils/Context.sol";
+import {Initializable} from "@openzeppelin/contracts-/proxy/utils/Initializable.sol";
+import { ONFT721Core } from "./ONFT721Core.sol";
 
 /**
  * @title ONFT721Adapter Contract
@@ -13,7 +13,7 @@ import { ONFT721CoreUpgradeable } from "./ONFT721CoreUpgradeable.sol";
  * @dev ERC721 NFTs from extensions which revert certain transactions, such as ones from blocked wallets or soulbound
  * @dev tokens, may still be bridgeable.
  */
-abstract contract ONFT721AdapterUpgradeable is ONFT721CoreUpgradeable {
+abstract contract ONFT721Adapter is ONFT721Core {
     struct ONFT721AdapterStorage {
         IERC721 innerToken;
     }

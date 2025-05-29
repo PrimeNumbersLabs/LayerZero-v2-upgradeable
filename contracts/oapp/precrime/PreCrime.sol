@@ -2,33 +2,20 @@
 
 pragma solidity ^0.8.20;
 
-import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { SafeOwnable } from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 import { BytesLib } from "solidity-bytes-utils/contracts/BytesLib.sol";
 import { ILayerZeroEndpointV2 } from "../../protocol/interfaces/ILayerZeroEndpointV2.sol";
-
-import { IPreCrimeUpgradeable, PreCrimePeer } from "./interfaces/IPreCrimeUpgradeable.sol";
-import { IOAppPreCrimeSimulatorUpgradeable } from "./interfaces/IOAppPreCrimeSimulatorUpgradeable.sol";
+import { PreCrimeStorage } from "./libs/PreCrimeStorage.sol";
+import { IPreCrime, PreCrimePeer } from "./interfaces/IPreCrime.sol";
+import { IOAppPreCrimeSimulator } from "./interfaces/IOAppPreCrimeSimulator.sol";
 import { InboundPacket, PacketDecoder } from "./libs/Packet.sol";
 
-abstract contract PreCrimeUpgradeable is OwnableUpgradeable, IPreCrimeUpgradeable {
+abstract contract PreCrime is SafeOwnable, IPreCrime {
     using BytesLib for bytes;
-
-    struct PreCrimeStorage {
-        // preCrime config
-        uint64 maxBatchSize;
-        PreCrimePeer[] preCrimePeers;
-    }
-
-    // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.precrime")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant PreCrimeStorageLocation =
-        0x480d514d38955dc07fd3953b01fc0be91fc4d23c84aa64616ba3eb9a7738e300;
+    using PreCrimeStorage for PreCrimeStorage.Layout;
 
     uint16 internal constant CONFIG_VERSION = 2;
     address internal constant OFF_CHAIN_CALLER = address(0xDEAD);
-
-    address internal immutable lzEndpoint;
-    address public immutable simulator;
-    address public immutable oApp;
 
     /// @dev getConfig(), simulate() and preCrime() are not view functions because it is more flexible to be able to
     ///      update state for some complex logic. So onlyOffChain() modifier is to make sure they are only called
@@ -38,38 +25,46 @@ abstract contract PreCrimeUpgradeable is OwnableUpgradeable, IPreCrimeUpgradeabl
         _;
     }
 
-    function _getPreCrimeStorage() internal pure returns (PreCrimeStorage storage $) {
-        assembly {
-            $.slot := PreCrimeStorageLocation
-        }
-    }
-
-    constructor(address _endpoint, address _simulator) {
-        lzEndpoint = _endpoint;
-        simulator = _simulator;
-        oApp = IOAppPreCrimeSimulatorUpgradeable(_simulator).oApp();
-    }
-
     /**
      * @dev Ownable is not initialized here on purpose. It should be initialized in the child contract to
      * accommodate the different version of Ownable.
      */
-    function __PreCrime_init() internal onlyInitializing {}
+    function __PreCrime_init(address _endpoint, address _simulator) internal onlyInitializing {
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
+        $.lzEndpoint = _endpoint;
+        $.simulator = _simulator;
+        $.oApp = IOAppPreCrimeSimulator(_simulator).oApp();
+    }
 
     function __PreCrime_init_unchained() internal onlyInitializing {}
 
+    function lzEndpoint() external view returns (address) {
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
+        return $.lzEndpoint;
+    }
+
+    function simulator() external view returns (address) {
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
+        return $.simulator;
+    }
+
+    function oApp() external view returns (address) {
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
+        return $.oApp;
+    }
+
     function maxBatchSize() external view returns (uint64) {
-        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
         return $.maxBatchSize;
     }
 
     function setMaxBatchSize(uint64 _maxBatchSize) external onlyOwner {
-        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
         $.maxBatchSize = _maxBatchSize;
     }
 
     function setPreCrimePeers(PreCrimePeer[] calldata _preCrimePeers) external onlyOwner {
-        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
         delete $.preCrimePeers;
         for (uint256 i = 0; i < _preCrimePeers.length; ++i) {
             $.preCrimePeers.push(_preCrimePeers[i]);
@@ -77,7 +72,7 @@ abstract contract PreCrimeUpgradeable is OwnableUpgradeable, IPreCrimeUpgradeabl
     }
 
     function getPreCrimePeers() external view returns (PreCrimePeer[] memory) {
-        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
         return $.preCrimePeers;
     }
 
@@ -85,7 +80,7 @@ abstract contract PreCrimeUpgradeable is OwnableUpgradeable, IPreCrimeUpgradeabl
         bytes[] calldata _packets,
         uint256[] calldata _packetMsgValues
     ) external onlyOffChain returns (bytes memory) {
-        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
         bytes memory config = abi.encodePacked(CONFIG_VERSION, $.maxBatchSize);
 
         // if no packets, return config with all peers
@@ -139,7 +134,7 @@ abstract contract PreCrimeUpgradeable is OwnableUpgradeable, IPreCrimeUpgradeabl
     }
 
     function preCrimePeers() internal view returns (PreCrimePeer[] storage) {
-        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
         return $.preCrimePeers;
     }
 
@@ -166,7 +161,7 @@ abstract contract PreCrimeUpgradeable is OwnableUpgradeable, IPreCrimeUpgradeabl
     }
 
     function _checkPacketSizeAndOrder(InboundPacket[] memory _packets) internal view {
-        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
         if (_packets.length > $.maxBatchSize) revert PacketOversize($.maxBatchSize, _packets.length);
 
         // check packets nonce, sequence order
@@ -179,7 +174,7 @@ abstract contract PreCrimeUpgradeable is OwnableUpgradeable, IPreCrimeUpgradeabl
                 InboundPacket memory packet = _packets[i];
 
                 // skip if not from trusted peer
-                if (!IOAppPreCrimeSimulatorUpgradeable(simulator).isPeer(packet.origin.srcEid, packet.origin.sender)) continue;
+                if (!IOAppPreCrimeSimulator($.simulator).isPeer(packet.origin.srcEid, packet.origin.sender)) continue;
 
                 if (
                     packet.origin.srcEid < srcEid || (packet.origin.srcEid == srcEid && packet.origin.sender < sender)
@@ -201,8 +196,9 @@ abstract contract PreCrimeUpgradeable is OwnableUpgradeable, IPreCrimeUpgradeabl
     }
 
     function _simulate(InboundPacket[] memory _packets) internal virtual returns (bytes memory) {
-        (bool success, bytes memory returnData) = simulator.call{ value: msg.value }(
-            abi.encodeWithSelector(IOAppPreCrimeSimulatorUpgradeable.lzReceiveAndRevert.selector, _packets)
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
+        (bool success, bytes memory returnData) = $.simulator.call{ value: msg.value }(
+            abi.encodeWithSelector(IOAppPreCrimeSimulator.lzReceiveAndRevert.selector, _packets)
         );
 
         bytes memory result = _parseRevertResult(success, returnData);
@@ -214,7 +210,7 @@ abstract contract PreCrimeUpgradeable is OwnableUpgradeable, IPreCrimeUpgradeabl
         if (_success) revert SimulationFailed("no revert");
 
         // if not expected selector, bubble up error
-        if (bytes4(_returnData) != IOAppPreCrimeSimulatorUpgradeable.SimulationResult.selector) {
+        if (bytes4(_returnData) != IOAppPreCrimeSimulator.SimulationResult.selector) {
             revert SimulationFailed(_returnData);
         }
 
@@ -225,12 +221,14 @@ abstract contract PreCrimeUpgradeable is OwnableUpgradeable, IPreCrimeUpgradeabl
 
     // to be compatible with EndpointV1
     function _getLocalEid() internal view virtual returns (uint32) {
-        return ILayerZeroEndpointV2(lzEndpoint).eid();
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
+        return ILayerZeroEndpointV2($.lzEndpoint).eid();
     }
 
     // to be compatible with EndpointV1
     function _getInboundNonce(uint32 _srcEid, bytes32 _sender) internal view virtual returns (uint64) {
-        return ILayerZeroEndpointV2(lzEndpoint).inboundNonce(oApp, _srcEid, _sender);
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
+        return ILayerZeroEndpointV2($.lzEndpoint).inboundNonce($.oApp, _srcEid, _sender);
     }
 
     // ----------------- to be implemented -----------------

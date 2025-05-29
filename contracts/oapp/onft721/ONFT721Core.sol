@@ -2,14 +2,14 @@
 
 pragma solidity ^0.8.22;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable} from "@openzeppelin/contracts-/access/Ownable.sol";
 
-import { OAppUpgradeable, Origin } from "../oapp/OAppUpgradeable.sol";
+import { OApp, Origin } from "../oapp/OApp.sol";
 import { OAppOptionsType3 } from "../oapp/libs/OAppOptionsType3.sol";
 import { IOAppMsgInspector } from "../oapp/interfaces/IOAppMsgInspector.sol";
-import { OAppPreCrimeSimulatorUpgradeable } from "../precrime/OAppPreCrimeSimulatorUpgradeable.sol";
+import { OAppPreCrimeSimulator } from "../precrime/OAppPreCrimeSimulator.sol";
 
-import { IONFT721Upgradeable, MessagingFee, MessagingReceipt, SendParam } from "./interfaces/IONFT721Upgradeable.sol";
+import { IONFT721, MessagingFee, MessagingReceipt, SendParam } from "./interfaces/IONFT721.sol";
 import { ONFT721MsgCodec } from "./libs/ONFT721MsgCodec.sol";
 import { ONFTComposeMsgCodec } from "../libs/ONFTComposeMsgCodec.sol";
 
@@ -17,7 +17,7 @@ import { ONFTComposeMsgCodec } from "../libs/ONFTComposeMsgCodec.sol";
  * @title ONFT721Core
  * @dev Abstract contract for an ONFT721 token.
  */
-abstract contract ONFT721CoreUpgradeable is IONFT721Upgradeable, OAppUpgradeable, OAppPreCrimeSimulatorUpgradeable, OAppOptionsType3 {
+abstract contract ONFT721Core is IONFT721, OApp, OAppPreCrimeSimulator, OAppOptionsType3 {
     using ONFT721MsgCodec for bytes;
     using ONFT721MsgCodec for bytes32;
 
@@ -64,7 +64,7 @@ abstract contract ONFT721CoreUpgradeable is IONFT721Upgradeable, OAppUpgradeable
      * @dev ie. localONFT version(x,1) CAN send messages to remoteONFT version(x,1)
      */
     function onftVersion() external pure virtual returns (bytes4 interfaceId, uint64 version) {
-        return (type(IONFT721Upgradeable).interfaceId, 1);
+        return (type(IONFT721).interfaceId, 1);
     }
 
     /**

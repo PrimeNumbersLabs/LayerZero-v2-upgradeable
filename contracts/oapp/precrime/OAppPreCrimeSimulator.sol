@@ -2,29 +2,17 @@
 
 pragma solidity ^0.8.20;
 
-import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import { IPreCrimeUpgradeable } from "./interfaces/IPreCrimeUpgradeable.sol";
-import { IOAppPreCrimeSimulatorUpgradeable, InboundPacket, Origin } from "./interfaces/IOAppPreCrimeSimulatorUpgradeable.sol";
+import { SafeOwnable } from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
+import { OAppPreCrimeSimulatorStorage } from "./libs/OAppPreCrimeSimulatorStorage.sol";
+import { IPreCrime } from "./interfaces/IPreCrime.sol";
+import { IOAppPreCrimeSimulator, InboundPacket, Origin } from "./interfaces/IOAppPreCrimeSimulator.sol";
 
 /**
  * @title OAppPreCrimeSimulator
  * @dev Abstract contract serving as the base for preCrime simulation functionality in an OApp.
  */
-abstract contract OAppPreCrimeSimulatorUpgradeable is IOAppPreCrimeSimulatorUpgradeable, OwnableUpgradeable {
-    struct OAppPreCrimeSimulatorStorage {
-        // The address of the preCrime implementation.
-        address preCrime;
-    }
-
-    // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.oappprecrimesimulator")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant OAppPreCrimeSimulatorStorageLocation =
-        0x41cc82cee84fffdd1f933aa25ee29b9ef8f6f02e6e1fee0f86ecd08b727a8c00;
-
-    function _getOAppPreCrimeSimulatorStorage() internal pure returns (OAppPreCrimeSimulatorStorage storage $) {
-        assembly {
-            $.slot := OAppPreCrimeSimulatorStorageLocation
-        }
-    }
+abstract contract OAppPreCrimeSimulator is IOAppPreCrimeSimulator, SafeOwnable {
+    using OAppPreCrimeSimulatorStorage for OAppPreCrimeSimulatorStorage.Layout;
 
     /**
      * @dev Ownable is not initialized here on purpose. It should be initialized in the child contract to
@@ -35,7 +23,7 @@ abstract contract OAppPreCrimeSimulatorUpgradeable is IOAppPreCrimeSimulatorUpgr
     function __OAppPreCrimeSimulator_init_unchained() internal onlyInitializing {}
 
     function preCrime() external view override returns (address) {
-        OAppPreCrimeSimulatorStorage storage $ = _getOAppPreCrimeSimulatorStorage();
+        OAppPreCrimeSimulatorStorage.Layout storage $ = OAppPreCrimeSimulatorStorage.layout();
         return $.preCrime;
     }
 
@@ -55,7 +43,7 @@ abstract contract OAppPreCrimeSimulatorUpgradeable is IOAppPreCrimeSimulatorUpgr
      * @param _preCrime The address of the preCrime contract.
      */
     function setPreCrime(address _preCrime) public virtual onlyOwner {
-        OAppPreCrimeSimulatorStorage storage $ = _getOAppPreCrimeSimulatorStorage();
+        OAppPreCrimeSimulatorStorage.Layout storage $ = OAppPreCrimeSimulatorStorage.layout();
         $.preCrime = _preCrime;
         emit PreCrimeSet(_preCrime);
     }
@@ -91,8 +79,8 @@ abstract contract OAppPreCrimeSimulatorUpgradeable is IOAppPreCrimeSimulatorUpgr
             );
         }
 
-        // @dev Revert with the simulation results. msg.sender must implement IPreCrimeUpgradeable.buildSimulationResult().
-        revert SimulationResult(IPreCrimeUpgradeable(msg.sender).buildSimulationResult());
+        // @dev Revert with the simulation results. msg.sender must implement IPreCrime.buildSimulationResult().
+        revert SimulationResult(IPreCrime(msg.sender).buildSimulationResult());
     }
 
     /**

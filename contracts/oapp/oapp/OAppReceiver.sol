@@ -9,7 +9,7 @@ import { OAppCoreUpgradeable } from "./OAppCoreUpgradeable.sol";
  * @title OAppReceiver
  * @dev Abstract contract implementing the ILayerZeroReceiver interface and extending OAppCore for OApp receivers.
  */
-abstract contract OAppReceiverUpgradeable is IOAppReceiver, OAppCoreUpgradeable {
+abstract contract OAppReceiverUpgradeable is IOAppReceiver, OAppCore {
     // Custom error message for when the caller is not the registered endpoint/
     error OnlyEndpoint(address addr);
 

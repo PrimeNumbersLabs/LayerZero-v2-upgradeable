@@ -2,30 +2,17 @@
 
 pragma solidity ^0.8.20;
 
-import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import { IOAppCoreUpgradeable, ILayerZeroEndpointV2 } from "./interfaces/IOAppCoreUpgradeable.sol";
+import { SafeOwnable } from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
+import { OAppCoreStorage } from "./libs/OAppCoreStorage.sol";
+import { IOAppCore, ILayerZeroEndpointV2 } from "./interfaces/IOAppCore.sol";
 
 /**
  * @title OAppCore
  * @dev Abstract contract implementing the IOAppCore interface with basic OApp configurations.
  */
-abstract contract OAppCoreUpgradeable is IOAppCoreUpgradeable, OwnableUpgradeable {
-    struct OAppCoreStorage {
-        // The address of the LayerZero endpoint.
-        ILayerZeroEndpointV2 endpoint;
-
-        // Mapping to store peers associated with corresponding endpoints.
-        mapping(uint32 eid => bytes32 peer) peers;
-    }
+abstract contract OAppCore is IOAppCore, SafeOwnable {
     
-    // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.oappcore")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant OAppCoreStorageLocation = 0x402bd74f7d455ec1741bc37d35d77af9bd887a72bbef52ccbcd544c85ab49200;
-
-    function _getOAppCoreStorage() internal pure returns (OAppCoreStorage storage ds) {
-        assembly {
-            ds.slot := OAppCoreStorageLocation
-        }
-    }
+    using OAppCoreStorage for OAppCoreStorage.Layout;
 
     /**
      * @dev initialize the OAppCore with the provided endpoint and delegate.
