@@ -20,7 +20,7 @@ abstract contract OApp is OAppSender, OAppReceiver {
      * @param _endpoint The address of the LOCAL LayerZero endpoint.
      * @param _delegate The delegate capable of making OApp configurations inside of the endpoint.
      */
-    function __OApp_init(address _endpoint, address _delegate) internal onlyInitializing {
+    function __OApp_init(address _endpoint, address _delegate) internal {
         __OAppCore_init(_endpoint, _delegate);
     }
 

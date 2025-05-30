@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.22;
 
-import { MessagingFee, MessagingReceipt } from "../../oapp/OAppSenderUpgradeable.sol";
+import { MessagingFee, MessagingReceipt } from "../../oapp/OAppSender.sol";
 
 /**
  * @dev Struct representing token parameters for the ONFT send() operation.
@@ -21,7 +21,7 @@ struct SendParam {
  * @dev Interface for the ONFT721 token.
  * @dev Does not inherit ERC721 to accommodate usage by OFT721Adapter.
  */
-interface IONFT721Upgradeable {
+interface IONFT721 {
     // Custom error messages
     error InvalidReceiver();
     error OnlyNFTOwner(address caller, address owner);

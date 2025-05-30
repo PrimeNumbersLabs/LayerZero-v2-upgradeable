@@ -2,16 +2,17 @@
 
 pragma solidity ^0.8.22;
 
-import {Ownable} from "@openzeppelin/contracts-/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import { OApp, Origin } from "../oapp/OApp.sol";
 import { OAppOptionsType3 } from "../oapp/libs/OAppOptionsType3.sol";
 import { IOAppMsgInspector } from "../oapp/interfaces/IOAppMsgInspector.sol";
 import { OAppPreCrimeSimulator } from "../precrime/OAppPreCrimeSimulator.sol";
-
+import { ONFT721CoreStorage } from "./libs/ONFT721CoreStorage.sol";
 import { IONFT721, MessagingFee, MessagingReceipt, SendParam } from "./interfaces/IONFT721.sol";
 import { ONFT721MsgCodec } from "./libs/ONFT721MsgCodec.sol";
 import { ONFTComposeMsgCodec } from "../libs/ONFTComposeMsgCodec.sol";
+import { OAppCoreStorage } from "../oapp/libs/OAppCoreStorage.sol";
 
 /**
  * @title ONFT721Core
@@ -20,19 +21,8 @@ import { ONFTComposeMsgCodec } from "../libs/ONFTComposeMsgCodec.sol";
 abstract contract ONFT721Core is IONFT721, OApp, OAppPreCrimeSimulator, OAppOptionsType3 {
     using ONFT721MsgCodec for bytes;
     using ONFT721MsgCodec for bytes32;
-
-    struct ONFT721CoreStorage {
-        address msgInspector; // Address of the optional message inspector contract
-    }
-
-    // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.onft721core")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant ONFT721CoreStorageLocation = 0x831bef63b5afbb472ffb0039f0027e0f8cb92dca0f265bddf9c795a7b4be6400;
-
-    function _getONFT721CoreStorage() internal pure returns (ONFT721CoreStorage storage ds) {
-        assembly {
-            ds.slot := ONFT721CoreStorageLocation
-        }
-    }
+    using ONFT721CoreStorage for ONFT721CoreStorage.Layout;
+    using OAppCoreStorage for OAppCoreStorage.Layout;
 
     // @notice Msg types that are used to identify the various OFT operations.
     // @dev This can be extended in child contracts for non-default oft operations
@@ -50,8 +40,8 @@ abstract contract ONFT721Core is IONFT721, OApp, OAppPreCrimeSimulator, OAppOpti
     function __ONFT721Core_init(
         address _lzEndpoint,
         address _delegate
-    ) internal onlyInitializing {
-        __Ownable_init(_delegate);
+    ) internal {
+        _setOwner(msg.sender);
         __OApp_init(_lzEndpoint, _delegate);
     }
 
@@ -74,7 +64,7 @@ abstract contract ONFT721Core is IONFT721, OApp, OAppPreCrimeSimulator, OAppOpti
      * @dev Set it to address(0) to disable it, or set it to a contract address to enable it.
      */
     function setMsgInspector(address _msgInspector) public virtual onlyOwner {
-        ONFT721CoreStorage storage $ = _getONFT721CoreStorage();
+        ONFT721CoreStorage.Layout storage $ = ONFT721CoreStorage.layout();
         $.msgInspector = _msgInspector;
         emit MsgInspectorSet(_msgInspector);
     }
@@ -119,7 +109,7 @@ abstract contract ONFT721Core is IONFT721, OApp, OAppPreCrimeSimulator, OAppOpti
 
         // @dev Optionally inspect the message and options depending if the OApp owner has set a msg inspector.
         // @dev If it fails inspection, needs to revert in the implementation. ie. does not rely on return boolean
-        ONFT721CoreStorage storage $ = _getONFT721CoreStorage();
+        ONFT721CoreStorage.Layout storage $ = ONFT721CoreStorage.layout();
         address inspector = $.msgInspector; // caches the msgInspector to avoid potential double storage read
         if (inspector != address(0)) IOAppMsgInspector(inspector).inspect(message, options);
     }
@@ -147,7 +137,7 @@ abstract contract ONFT721Core is IONFT721, OApp, OAppPreCrimeSimulator, OAppOpti
 
         _credit(toAddress, tokenId, _origin.srcEid);
 
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
 
         if (_message.isComposed()) {
             bytes memory composeMsg = ONFTComposeMsgCodec.encode(_origin.nonce, _origin.srcEid, _message.composeMsg());
@@ -190,7 +180,7 @@ abstract contract ONFT721Core is IONFT721, OApp, OAppPreCrimeSimulator, OAppOpti
      * @dev Enables OAppPreCrimeSimulator to check whether a potential Inbound Packet is from a trusted source.
      */
     function isPeer(uint32 _eid, bytes32 _peer) public view virtual override returns (bool) {
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
         return $.peers[_eid] == _peer;
     }
 

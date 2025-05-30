@@ -2,27 +2,16 @@
 
 pragma solidity ^0.8.22;
 
-import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-
-import { ONFT721CoreUpgradeable } from "./ONFT721CoreUpgradeable.sol";
+import { SolidStateERC721, ERC721Base } from "@solidstate/contracts/token/ERC721/SolidStateERC721.sol";
+import { ERC721MetadataStorage } from "@solidstate/contracts/token/ERC721/metadata/ERC721MetadataStorage.sol";
+import { ONFT721Core } from "./ONFT721Core.sol";
 
 /**
  * @title ONFT721 Contract
  * @dev ONFT721 is an ERC-721 token that extends the functionality of the ONFT721Core contract.
  */
-abstract contract ONFT721Upgradeable is ONFT721CoreUpgradeable, ERC721Upgradeable {
-    struct ONFT721Storage {
-        string baseTokenURI;
-    }
-
-    // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.onft721")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant ONFT721StorageLocation = 0xa5a99e5d707b91b39b61e115bcc168c190d746f2210fdee1a2c5310845432400;
-
-    function _getONFT721Storage() internal pure returns (ONFT721Storage storage ds) {
-        assembly {
-            ds.slot := ONFT721StorageLocation
-        }
-    }
+abstract contract ONFT721 is SolidStateERC721, ONFT721Core {
+    using ERC721MetadataStorage for ERC721MetadataStorage.Layout;
 
     event BaseURISet(string baseURI);
 
@@ -38,8 +27,10 @@ abstract contract ONFT721Upgradeable is ONFT721CoreUpgradeable, ERC721Upgradeabl
         string memory _symbol,
         address _lzEndpoint,
         address _delegate
-    ) internal onlyInitializing {
-        __ERC721_init(_name, _symbol);
+    ) internal {
+        ERC721MetadataStorage.Layout storage $ = ERC721MetadataStorage.layout();
+        $.name = _name;
+        $.symbol = _symbol;
         __ONFT721Core_init(_lzEndpoint, _delegate);
     }
 
@@ -51,14 +42,14 @@ abstract contract ONFT721Upgradeable is ONFT721CoreUpgradeable, ERC721Upgradeabl
     }
 
     function setBaseURI(string calldata _baseTokenURI) external onlyOwner {
-        ONFT721Storage storage $ = _getONFT721Storage();
-        $.baseTokenURI = _baseTokenURI;
-        emit BaseURISet($.baseTokenURI);
+        ERC721MetadataStorage.Layout storage $ = ERC721MetadataStorage.layout();
+        $.baseURI = _baseTokenURI;
+        emit BaseURISet($.baseURI);
     }
 
-    function _baseURI() internal view override returns (string memory) {
-        ONFT721Storage storage $ = _getONFT721Storage();
-        return $.baseTokenURI;
+    function _baseURI() internal view returns (string memory) {
+        ERC721MetadataStorage.Layout storage $ = ERC721MetadataStorage.layout();
+        return $.baseURI;
     }
 
     /**
@@ -71,7 +62,7 @@ abstract contract ONFT721Upgradeable is ONFT721CoreUpgradeable, ERC721Upgradeabl
     }
 
     function _debit(address _from, uint256 _tokenId, uint32 /*_dstEid*/) internal virtual override {
-        if (_from != ERC721Upgradeable.ownerOf(_tokenId)) revert OnlyNFTOwner(_from, ERC721Upgradeable.ownerOf(_tokenId));
+        if (_from != _ownerOf(_tokenId)) revert OnlyNFTOwner(_from, _ownerOf(_tokenId));
         _burn(_tokenId);
     }
 

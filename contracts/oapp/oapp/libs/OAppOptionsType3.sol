@@ -2,18 +2,18 @@
 
 pragma solidity ^0.8.20;
 
-import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { SafeOwnable } from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 import { IOAppOptionsType3, EnforcedOptionParam } from "../interfaces/IOAppOptionsType3.sol";
+import { OAppOptionsType3Storage } from "./OAppOptionsType3Storage.sol";
 
 /**
  * @title OAppOptionsType3
  * @dev Abstract contract implementing the IOAppOptionsType3 interface with type 3 options.
  */
-abstract contract OAppOptionsType3 is IOAppOptionsType3, OwnableUpgradeable {
-    uint16 internal constant OPTION_TYPE_3 = 3;
+abstract contract OAppOptionsType3 is IOAppOptionsType3, SafeOwnable {
+    using OAppOptionsType3Storage for OAppOptionsType3Storage.Layout;
 
-    // @dev The "msgType" should be defined in the child contract.
-    mapping(uint32 eid => mapping(uint16 msgType => bytes enforcedOption)) public enforcedOptions;
+    uint16 internal constant OPTION_TYPE_3 = 3;
 
     /**
      * @dev Sets the enforced options for specific endpoint and message type combinations.
@@ -39,6 +39,8 @@ abstract contract OAppOptionsType3 is IOAppOptionsType3, OwnableUpgradeable {
      * if you are only making a standard LayerZero message ie. lzReceive() WITHOUT sendCompose().
      */
     function _setEnforcedOptions(EnforcedOptionParam[] memory _enforcedOptions) internal virtual {
+        OAppOptionsType3Storage.Layout storage $ = OAppOptionsType3Storage.layout();
+        mapping(uint32 eid => mapping(uint16 msgType => bytes enforcedOption)) storage enforcedOptions = $.enforcedOptions;
         for (uint256 i = 0; i < _enforcedOptions.length; i++) {
             // @dev Enforced options are only available for optionType 3, as type 1 and 2 dont support combining.
             _assertOptionsType3(_enforcedOptions[i].options);
@@ -65,6 +67,8 @@ abstract contract OAppOptionsType3 is IOAppOptionsType3, OwnableUpgradeable {
         uint16 _msgType,
         bytes calldata _extraOptions
     ) public view virtual returns (bytes memory) {
+        OAppOptionsType3Storage.Layout storage $ = OAppOptionsType3Storage.layout();
+        mapping(uint32 eid => mapping(uint16 msgType => bytes enforcedOption)) storage enforcedOptions = $.enforcedOptions;
         bytes memory enforced = enforcedOptions[_eid][_msgType];
 
         // No enforced options, pass whatever the caller supplied, even if it's empty or legacy type 1/2 options.

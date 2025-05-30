@@ -3,9 +3,10 @@
 pragma solidity ^0.8.22;
 
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {Context} from "@openzeppelin/contracts-/utils/Context.sol";
-import {Initializable} from "@openzeppelin/contracts-/proxy/utils/Initializable.sol";
+import {Context} from "@openzeppelin/contracts/utils/Context.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { ONFT721Core } from "./ONFT721Core.sol";
+import {ONFT721AdapterStorage} from "./libs/ONFT721AdapterStorage.sol";
 
 /**
  * @title ONFT721Adapter Contract
@@ -14,18 +15,7 @@ import { ONFT721Core } from "./ONFT721Core.sol";
  * @dev tokens, may still be bridgeable.
  */
 abstract contract ONFT721Adapter is ONFT721Core {
-    struct ONFT721AdapterStorage {
-        IERC721 innerToken;
-    }
-
-    // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.onft721adapter")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant ONFT721AdapterStorageLocation = 0x11e0f117225a3dc9e19549ccf79cc9737461fce17edb3816e369f52c9f1b5100;
-
-    function _getONFT721AdapterStorage() internal pure returns (ONFT721AdapterStorage storage ds) {
-        assembly {
-            ds.slot := ONFT721AdapterStorageLocation
-        }
-    }
+    using ONFT721AdapterStorage for ONFT721AdapterStorage.Layout;
 
     /**
      * @dev Constructor for the ONFT721 contract.
@@ -37,9 +27,9 @@ abstract contract ONFT721Adapter is ONFT721Core {
         address _token,
         address _lzEndpoint,
         address _delegate
-    ) internal onlyInitializing {
+    ) internal {
         __ONFT721Core_init(_lzEndpoint, _delegate);
-        ONFT721AdapterStorage storage $ = _getONFT721AdapterStorage();
+        ONFT721AdapterStorage.Layout storage $ = ONFT721AdapterStorage.layout();
         $.innerToken = IERC721(_token);
     }
 
@@ -47,7 +37,7 @@ abstract contract ONFT721Adapter is ONFT721Core {
      * @notice Retrieves the address of the underlying ERC721 implementation (ie. external contract).
      */
     function token() external view returns (address) {
-        ONFT721AdapterStorage storage $ = _getONFT721AdapterStorage();
+        ONFT721AdapterStorage.Layout storage $ = ONFT721AdapterStorage.layout();
         return address($.innerToken);
     }
 
@@ -62,7 +52,7 @@ abstract contract ONFT721Adapter is ONFT721Core {
 
     function _debit(address _from, uint256 _tokenId, uint32 /*_dstEid*/) internal virtual override {
         // @dev Dont need to check onERC721Received() when moving into this contract, ie. no 'safeTransferFrom' required
-        ONFT721AdapterStorage storage $ = _getONFT721AdapterStorage();
+        ONFT721AdapterStorage.Layout storage $ = ONFT721AdapterStorage.layout();
         $.innerToken.transferFrom(_from, address(this), _tokenId);
     }
 
@@ -71,7 +61,7 @@ abstract contract ONFT721Adapter is ONFT721Core {
         // required
         // @dev The default implementation does not implement IERC721Receiver as 'safeTransferFrom' is not used.
         // @dev If IERC721Receiver is required, ensure proper re-entrancy protection is implemented.
-        ONFT721AdapterStorage storage $ = _getONFT721AdapterStorage();
+        ONFT721AdapterStorage.Layout storage $ = ONFT721AdapterStorage.layout();
         $.innerToken.transferFrom(address(this), _toAddress, _tokenId);
     }
 }

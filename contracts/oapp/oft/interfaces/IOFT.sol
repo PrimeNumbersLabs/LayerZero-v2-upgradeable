@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.20;
 
-import { MessagingReceipt, MessagingFee } from "../../oapp/OAppSenderUpgradeable.sol";
+import { MessagingReceipt, MessagingFee } from "../../oapp/OAppSender.sol";
 
 /**
  * @dev Struct representing token parameters for the OFT send() operation.
@@ -50,7 +50,7 @@ struct OFTFeeDetail {
  * @dev Does not inherit ERC20 to accommodate usage by OFTAdapter as well.
  * @dev This specific interface ID is '0x02e49c2c'.
  */
-interface IOFTUpgradeable {
+interface IOFT {
     // Custom error messages
     error InvalidLocalDecimals();
     error SlippageExceeded(uint256 amountLD, uint256 minAmountLD);

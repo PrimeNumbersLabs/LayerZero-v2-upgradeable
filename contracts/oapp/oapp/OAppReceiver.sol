@@ -3,13 +3,16 @@
 pragma solidity ^0.8.20;
 
 import { IOAppReceiver, Origin } from "./interfaces/IOAppReceiver.sol";
-import { OAppCoreUpgradeable } from "./OAppCoreUpgradeable.sol";
+import { OAppCore } from "./OAppCore.sol";
+import { OAppCoreStorage } from "./libs/OAppCoreStorage.sol";
 
 /**
  * @title OAppReceiver
  * @dev Abstract contract implementing the ILayerZeroReceiver interface and extending OAppCore for OApp receivers.
  */
-abstract contract OAppReceiverUpgradeable is IOAppReceiver, OAppCore {
+abstract contract OAppReceiver is IOAppReceiver, OAppCore {
+    using OAppCoreStorage for OAppCoreStorage.Layout;
+
     // Custom error message for when the caller is not the registered endpoint/
     error OnlyEndpoint(address addr);
 
@@ -61,7 +64,7 @@ abstract contract OAppReceiverUpgradeable is IOAppReceiver, OAppCore {
      * Can be overridden by the OApp if there is other logic to determine this.
      */
     function allowInitializePath(Origin calldata origin) public view virtual returns (bool) {
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
         return $.peers[origin.srcEid] == origin.sender;
     }
 
@@ -100,7 +103,7 @@ abstract contract OAppReceiverUpgradeable is IOAppReceiver, OAppCore {
         address _executor,
         bytes calldata _extraData
     ) public payable virtual {
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
         // Ensures that only the endpoint can attempt to lzReceive() messages to this OApp.
         if (address($.endpoint) != msg.sender) revert OnlyEndpoint(msg.sender);
 

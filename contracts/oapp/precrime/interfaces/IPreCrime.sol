@@ -8,7 +8,7 @@ struct PreCrimePeer {
 }
 
 // TODO not done yet
-interface IPreCrimeUpgradeable {
+interface IPreCrime {
     error OnlyOffChain();
 
     // for simulate()

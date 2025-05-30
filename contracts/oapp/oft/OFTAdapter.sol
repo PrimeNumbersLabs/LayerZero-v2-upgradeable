@@ -5,6 +5,7 @@ pragma solidity ^0.8.20;
 import { IERC20Metadata, IERC20 } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IOFT, OFTCore } from "./OFTCore.sol";
+import { OFTAdapterStorage } from "./libs/OFTAdapterStorage.sol";
 
 /**
  * @title OFTAdapter Contract
@@ -19,18 +20,7 @@ import { IOFT, OFTCore } from "./OFTCore.sol";
  */
 abstract contract OFTAdapter is OFTCore {
     using SafeERC20 for IERC20;
-
-    IERC20 internal immutable innerToken;
-
-    /**
-     * @dev Constructor for the OFTAdapter contract.
-     * @param _token The address of the ERC-20 token to be adapted.
-     */
-    constructor(
-        address _token
-    ) {
-        innerToken = IERC20(_token);
-    }
+    using OFTAdapterStorage for OFTAdapterStorage.Layout;
 
     /**
      * @dev Initializes the OFTAdapter contract.
@@ -42,13 +32,15 @@ abstract contract OFTAdapter is OFTCore {
         address _lzEndpoint,
         address _delegate
     ) public initializer {
-        __OFTCore_init(IERC20Metadata(address(innerToken)).decimals(), _lzEndpoint, _delegate);
+        __OFTCore_init(IERC20Metadata(_innerToken).decimals(), _lzEndpoint, _delegate);
+        __OFTAdapter_init(_innerToken);
     }
 
     function __OFTAdapter_init(
         address _innerToken
-    ) internal onlyInitializing {
-        
+    ) internal {
+        OFTAdapterStorage.Layout storage $ = OFTAdapterStorage.layout();
+        $.innerToken = IERC20(_innerToken);
     }
 
     /**
@@ -58,7 +50,8 @@ abstract contract OFTAdapter is OFTCore {
      * @dev In the case of OFTAdapter, address(this) and erc20 are NOT the same contract.
      */
     function token() public view returns (address) {
-        return address(innerToken);
+        OFTAdapterStorage.Layout storage $ = OFTAdapterStorage.layout();
+        return address($.innerToken);
     }
 
     /**
@@ -94,7 +87,8 @@ abstract contract OFTAdapter is OFTCore {
     ) internal virtual override returns (uint256 amountSentLD, uint256 amountReceivedLD) {
         (amountSentLD, amountReceivedLD) = _debitView(_amountLD, _minAmountLD, _dstEid);
         // @dev Lock tokens by moving them into this contract from the caller.
-        innerToken.safeTransferFrom(_from, address(this), amountSentLD);
+        OFTAdapterStorage.Layout storage $ = OFTAdapterStorage.layout();
+        $.innerToken.safeTransferFrom(_from, address(this), amountSentLD);
     }
 
     /**
@@ -114,7 +108,8 @@ abstract contract OFTAdapter is OFTCore {
         uint32 /*_srcEid*/
     ) internal virtual override returns (uint256 amountReceivedLD) {
         // @dev Unlock the tokens and transfer to the recipient.
-        innerToken.safeTransfer(_to, _amountLD);
+        OFTAdapterStorage.Layout storage $ = OFTAdapterStorage.layout();
+        $.innerToken.safeTransfer(_to, _amountLD);
         // @dev In the case of NON-default OFTAdapter, the amountLD MIGHT not be == amountReceivedLD.
         return _amountLD;
     }

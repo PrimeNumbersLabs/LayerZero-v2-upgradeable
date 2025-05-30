@@ -29,14 +29,16 @@ abstract contract PreCrime is SafeOwnable, IPreCrime {
      * @dev Ownable is not initialized here on purpose. It should be initialized in the child contract to
      * accommodate the different version of Ownable.
      */
-    function __PreCrime_init(address _endpoint, address _simulator) internal onlyInitializing {
+    function __PreCrime_init(address _endpoint, address _simulator) internal {
+        __PreCrime_init_unchained(_endpoint, _simulator);
+    }
+
+    function __PreCrime_init_unchained(address _endpoint, address _simulator) internal {
         PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
         $.lzEndpoint = _endpoint;
         $.simulator = _simulator;
         $.oApp = IOAppPreCrimeSimulator(_simulator).oApp();
     }
-
-    function __PreCrime_init_unchained() internal onlyInitializing {}
 
     function lzEndpoint() external view returns (address) {
         PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();

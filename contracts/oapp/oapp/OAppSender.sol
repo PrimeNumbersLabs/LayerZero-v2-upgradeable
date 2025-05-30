@@ -4,13 +4,14 @@ pragma solidity ^0.8.20;
 
 import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { MessagingParams, MessagingFee, MessagingReceipt } from "../../protocol/interfaces/ILayerZeroEndpointV2.sol";
-import { OAppCoreUpgradeable } from "./OAppCoreUpgradeable.sol";
-
+import { OAppCore } from "./OAppCore.sol";
+import { OAppCoreStorage } from "./libs/OAppCoreStorage.sol";
 /**
  * @title OAppSender
  * @dev Abstract contract implementing the OAppSender functionality for sending messages to a LayerZero endpoint.
  */
-abstract contract OAppSenderUpgradeable is OAppCoreUpgradeable {
+abstract contract OAppSender is OAppCore {
+    using OAppCoreStorage for OAppCoreStorage.Layout;
     using SafeERC20 for IERC20;
 
     // Custom error messages
@@ -50,7 +51,7 @@ abstract contract OAppSenderUpgradeable is OAppCoreUpgradeable {
         bytes memory _options,
         bool _payInLzToken
     ) internal view virtual returns (MessagingFee memory fee) {
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
         return
             $.endpoint.quote(
                 MessagingParams(_dstEid, _getPeerOrRevert(_dstEid), _message, _options, _payInLzToken),
@@ -83,7 +84,7 @@ abstract contract OAppSenderUpgradeable is OAppCoreUpgradeable {
         uint256 messageValue = _payNative(_fee.nativeFee);
         if (_fee.lzTokenFee > 0) _payLzToken(_fee.lzTokenFee);
 
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
 
         return
             // solhint-disable-next-line check-send-result
@@ -118,7 +119,7 @@ abstract contract OAppSenderUpgradeable is OAppCoreUpgradeable {
      */
     function _payLzToken(uint256 _lzTokenFee) internal virtual {
         // @dev Cannot cache the token because it is not immutable in the endpoint.
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
         address lzToken = $.endpoint.lzToken();
         if (lzToken == address(0)) revert LzTokenUnavailable();
 

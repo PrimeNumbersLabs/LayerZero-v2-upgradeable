@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.22;
 
-import { ILayerZeroEndpointV2 } from "@layerzerolabs/lz-definitions/interfaces/ILayerZeroEndpointV2.sol";
+import { ILayerZeroEndpointV2 } from "../interfaces/IOAppCore.sol";
 
 library OAppCoreStorage {
     struct Layout {

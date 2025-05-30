@@ -3,6 +3,7 @@
 pragma solidity ^0.8.20;
 
 import { SafeOwnable } from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
+import "@solidstate/contracts/security/initializable/Initializable.sol";
 import { OAppPreCrimeSimulatorStorage } from "./libs/OAppPreCrimeSimulatorStorage.sol";
 import { IPreCrime } from "./interfaces/IPreCrime.sol";
 import { IOAppPreCrimeSimulator, InboundPacket, Origin } from "./interfaces/IOAppPreCrimeSimulator.sol";
@@ -11,16 +12,16 @@ import { IOAppPreCrimeSimulator, InboundPacket, Origin } from "./interfaces/IOAp
  * @title OAppPreCrimeSimulator
  * @dev Abstract contract serving as the base for preCrime simulation functionality in an OApp.
  */
-abstract contract OAppPreCrimeSimulator is IOAppPreCrimeSimulator, SafeOwnable {
+abstract contract OAppPreCrimeSimulator is IOAppPreCrimeSimulator, SafeOwnable, Initializable {
     using OAppPreCrimeSimulatorStorage for OAppPreCrimeSimulatorStorage.Layout;
 
     /**
      * @dev Ownable is not initialized here on purpose. It should be initialized in the child contract to
      * accommodate the different version of Ownable.
      */
-    function __OAppPreCrimeSimulator_init() internal onlyInitializing {}
+    function __OAppPreCrimeSimulator_init() internal {}
 
-    function __OAppPreCrimeSimulator_init_unchained() internal onlyInitializing {}
+    function __OAppPreCrimeSimulator_init_unchained() internal {}
 
     function preCrime() external view override returns (address) {
         OAppPreCrimeSimulatorStorage.Layout storage $ = OAppPreCrimeSimulatorStorage.layout();

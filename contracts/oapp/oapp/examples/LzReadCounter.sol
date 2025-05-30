@@ -5,10 +5,12 @@ pragma solidity ^0.8.20;
 import { ILayerZeroEndpointV2, MessagingFee, MessagingReceipt, Origin } from "../../../protocol/interfaces/ILayerZeroEndpointV2.sol";
 import { ReadCmdCodecV1, EVMCallComputeV1, EVMCallRequestV1 } from "../libs/ReadCmdCodecV1.sol";
 import { IOAppComputer } from "../interfaces/IOAppComputer.sol";
+import { LzReadCounterStorage } from "../libs/LzReadCounterStorage.sol";
+import { OAppRead } from "../OAppRead.sol";
+import { Initializable } from "@solidstate/contracts/security/initializable/Initializable.sol";
 
-import { OAppReadUpgradeable } from "../OAppReadUpgradeable.sol";
-
-contract LzReadCounterUpgradeable is OAppReadUpgradeable, IOAppComputer {
+contract LzReadCounter is OAppRead, Initializable, IOAppComputer {
+    using LzReadCounterStorage for LzReadCounterStorage.Layout;
     struct EvmReadRequest {
         uint16 appRequestLabel;
         uint32 targetEid;
@@ -26,36 +28,19 @@ contract LzReadCounterUpgradeable is OAppReadUpgradeable, IOAppComputer {
         bool isBlockNum;
     }
 
-    struct LzReadCounterStorage {
-        uint256 count;
-    }
-
-    // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.lzreadcounter")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 internal constant LzReadCounterStorageLocation = 0xff9d5fe0e5d16df304a8a1e0adecf6166c1a70835ffdf079de6b44823c9a8900;
-
-    function _getLzReadCounterStorage() internal pure returns (LzReadCounterStorage storage ds) {
-        assembly {
-            ds.slot := LzReadCounterStorageLocation
-        }
-    }
-
     uint8 internal constant COMPUTE_SETTING_MAP_ONLY = 0;
     uint8 internal constant COMPUTE_SETTING_REDUCE_ONLY = 1;
     uint8 internal constant COMPUTE_SETTING_MAP_REDUCE = 2;
     uint8 internal constant COMPUTE_SETTING_NONE = 3;
 
-    uint32 public immutable eid;
-
-    constructor(address _endpoint) {
-        eid = ILayerZeroEndpointV2(_endpoint).eid();
-    }
-
     function initialize(address _endpoint, address _delegate) external initializer {
         __OAppRead_init(_endpoint, _delegate);
+        LzReadCounterStorage.Layout storage $ = LzReadCounterStorage.layout();
+        $.eid = ILayerZeroEndpointV2(_endpoint).eid();
     }
 
     function count() external view returns (uint256) {
-        LzReadCounterStorage storage $ = _getLzReadCounterStorage();
+        LzReadCounterStorage.Layout storage $ = LzReadCounterStorage.layout();
         return $.count;
     }
 
@@ -69,13 +54,13 @@ contract LzReadCounterUpgradeable is OAppReadUpgradeable, IOAppComputer {
         bytes calldata _options
     ) external payable returns (MessagingReceipt memory receipt) {
         bytes memory cmd = buildCmd(_appLabel, _requests, _computeSetting);
-        LzReadCounterStorage storage $ = _getLzReadCounterStorage();
+        LzReadCounterStorage.Layout storage $ = LzReadCounterStorage.layout();
         $.count += 1; // increase the count, for pin block testing
         return _lzSend(_channelId, cmd, _options, MessagingFee(msg.value, 0), payable(msg.sender));
     }
 
     function clearCount() external {
-        LzReadCounterStorage storage $ = _getLzReadCounterStorage();
+        LzReadCounterStorage.Layout storage $ = LzReadCounterStorage.layout();
         $.count = 0;
     }
 
@@ -115,6 +100,7 @@ contract LzReadCounterUpgradeable is OAppReadUpgradeable, IOAppComputer {
         }
         // build compute, on current contract
         require(_computeSetting.computeSetting <= COMPUTE_SETTING_NONE, "LzReadCounter: invalid compute type");
+        uint32 eid = LzReadCounterStorage.layout().eid; // local eid
         EVMCallComputeV1 memory evmCompute = EVMCallComputeV1({
             computeSetting: _computeSetting.computeSetting,
             targetEid: _computeSetting.computeSetting == COMPUTE_SETTING_NONE ? 0 : eid, // 0(means no compute) for none, else use local eid
@@ -130,7 +116,7 @@ contract LzReadCounterUpgradeable is OAppReadUpgradeable, IOAppComputer {
 
     function readCount(uint256 countAddition) external view returns (uint256) {
         require(countAddition != 9, "LzReadCounter: invalid count addition"); // This is only for testing
-        LzReadCounterStorage storage $ = _getLzReadCounterStorage();
+        LzReadCounterStorage.Layout storage $ = LzReadCounterStorage.layout();
         return $.count + countAddition;
     }
 
@@ -166,7 +152,7 @@ contract LzReadCounterUpgradeable is OAppReadUpgradeable, IOAppComputer {
     ) internal override {
         require(_message.length % 32 == 0, "LzReadCounter: invalid message length");
         uint256 total = 0;
-        LzReadCounterStorage storage $ = _getLzReadCounterStorage();
+        LzReadCounterStorage.Layout storage $ = LzReadCounterStorage.layout();
         // loop read bytes32 of the message and decode it to uint256 then add it to the total
         for (uint256 i = 0; i < _message.length; i += 32) {
             total += abi.decode(_message[i:i + 32], (uint256));

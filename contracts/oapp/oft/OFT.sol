@@ -22,9 +22,10 @@ abstract contract OFT is OFTCore, SolidStateERC20 {
         string memory _symbol,
         address _lzEndpoint,
         address _delegate
-    ) internal onlyInitializing {
-        __ERC20_init(_name, _symbol);
-        __OFTCore_init(decimals(), _lzEndpoint, _delegate);
+    ) internal {
+        _setName(_name);
+        _setSymbol(_symbol);
+        __OFTCore_init(_decimals(), _lzEndpoint, _delegate);
     }
 
     /**

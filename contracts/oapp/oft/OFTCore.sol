@@ -12,6 +12,9 @@ import { IOFT, SendParam, OFTLimit, OFTReceipt, OFTFeeDetail, MessagingReceipt, 
 import { OFTMsgCodec } from "./libs/OFTMsgCodec.sol";
 import { OFTComposeMsgCodec } from "./libs/OFTComposeMsgCodec.sol";
 
+import { OFTCoreStorage } from "./libs/OFTCoreStorage.sol";
+import { OAppCoreStorage } from "../oapp/libs/OAppCoreStorage.sol";
+
 /**
  * @title OFTCore
  * @dev Abstract contract for the OftChain (OFT) token.
@@ -20,6 +23,7 @@ abstract contract OFTCore is IOFT, OApp, OAppPreCrimeSimulator, OAppOptionsType3
     using OFTMsgCodec for bytes;
     using OFTMsgCodec for bytes32;
     using OFTCoreStorage for OFTCoreStorage.Layout;
+    using OAppCoreStorage for OAppCoreStorage.Layout;
 
     // @notice Msg types that are used to identify the various OFT operations.
     // @dev This can be extended in child contracts for non-default oft operations
@@ -39,7 +43,7 @@ abstract contract OFTCore is IOFT, OApp, OAppPreCrimeSimulator, OAppOptionsType3
         uint8 _localDecimals,
         address _endpoint,
         address _delegate
-    ) internal onlyInitializing {
+    ) internal {
         __OApp_init(_endpoint, _delegate);
 
         OFTCoreStorage.Layout storage $ = OFTCoreStorage.layout();
@@ -244,7 +248,7 @@ abstract contract OFTCore is IOFT, OApp, OAppPreCrimeSimulator, OAppOptionsType3
         // @dev Credit the amountLD to the recipient and return the ACTUAL amount the recipient received in local decimals
         uint256 amountReceivedLD = _credit(toAddress, _toLD(_message.amountSD()), _origin.srcEid);
 
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
 
         if (_message.isComposed()) {
             // @dev Proprietary composeMsg format for the OFT.
@@ -299,7 +303,7 @@ abstract contract OFTCore is IOFT, OApp, OAppPreCrimeSimulator, OAppOptionsType3
      * @dev Enables OAppPreCrimeSimulator to check whether a potential Inbound Packet is from a trusted source.
      */
     function isPeer(uint32 _eid, bytes32 _peer) public view virtual override returns (bool) {
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
         return $.peers[_eid] == _peer;
     }
 

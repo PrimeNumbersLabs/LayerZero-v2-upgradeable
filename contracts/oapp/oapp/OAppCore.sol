@@ -21,9 +21,9 @@ abstract contract OAppCore is IOAppCore, SafeOwnable {
      *
      * @dev The delegate typically should be set as the owner of the contract.
      */
-    function __OAppCore_init(address _endpoint, address _delegate) internal onlyInitializing {
-        __Ownable_init(_delegate);
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+    function __OAppCore_init(address _endpoint, address _delegate) internal {
+        _setOwner(msg.sender);
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
         $.endpoint = ILayerZeroEndpointV2(_endpoint);
 
         if (_delegate == address(0)) revert InvalidDelegate();
@@ -31,12 +31,12 @@ abstract contract OAppCore is IOAppCore, SafeOwnable {
     }
 
     function peers(uint32 _eid) external view returns (bytes32) {
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
         return $.peers[_eid];
     }
 
     function endpoint() external view returns (ILayerZeroEndpointV2) {
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
         return $.endpoint;
     }
 
@@ -64,7 +64,7 @@ abstract contract OAppCore is IOAppCore, SafeOwnable {
      * @dev Peer is a bytes32 to accommodate non-evm chains.
      */
     function _setPeer(uint32 _eid, bytes32 _peer) internal virtual {
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
         $.peers[_eid] = _peer;
         emit PeerSet(_eid, _peer);
     }
@@ -76,7 +76,7 @@ abstract contract OAppCore is IOAppCore, SafeOwnable {
      * @return peer The address of the peer associated with the specified endpoint.
      */
     function _getPeerOrRevert(uint32 _eid) internal view virtual returns (bytes32) {
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
         bytes32 peer = $.peers[_eid];
         if (peer == bytes32(0)) revert NoPeer(_eid);
         return peer;
@@ -90,7 +90,7 @@ abstract contract OAppCore is IOAppCore, SafeOwnable {
      * @dev Provides the ability for a delegate to set configs, on behalf of the OApp, directly on the Endpoint contract.
      */
     function setDelegate(address _delegate) public onlyOwner {
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
         $.endpoint.setDelegate(_delegate);
     }
 }

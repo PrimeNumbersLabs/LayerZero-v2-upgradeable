@@ -7,10 +7,10 @@ pragma solidity ^0.8.20;
 import { InboundPacket, Origin } from "../libs/Packet.sol";
 
 /**
- * @title IOAppPreCrimeSimulatorUpgradeable Interface
+ * @title IOAppPreCrimeSimulator Interface
  * @dev Interface for the preCrime simulation functionality in an OApp.
  */
-interface IOAppPreCrimeSimulatorUpgradeable {
+interface IOAppPreCrimeSimulator {
     // @dev simulation result used in PreCrime implementation
     error SimulationResult(bytes result);
     error OnlySelf();

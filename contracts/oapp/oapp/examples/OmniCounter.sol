@@ -12,7 +12,7 @@ contract OmniCounter is OmniCounterAbstract {
         address _endpoint,
         address _delegate
     ) external initializer {
-        __Ownable_init(_delegate);
+        _setOwner(_delegate);
         __OmniCounterAbstract_init(_endpoint, _delegate);
     }
 

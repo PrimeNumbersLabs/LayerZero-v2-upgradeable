@@ -2,20 +2,6 @@
 
 pragma solidity ^0.8.20;
 
-import { OAppUpgradeable, Origin } from "../oapp/OAppUpgradeable.sol";
-import { OAppOptionsType3 } from "../oapp/libs/OAppOptionsType3.sol";
-import { IOAppMsgInspector } from "../oapp/interfaces/IOAppMsgInspector.sol";
-
-import { OAppPreCrimeSimulatorUpgradeable } from "../precrime/OAppPreCrimeSimulatorUpgradeable.sol";
-
-import { IOFTUpgradeable, SendParam, OFTLimit, OFTReceipt, OFTFeeDetail, MessagingReceipt, MessagingFee } from "./interfaces/IOFTUpgradeable.sol";
-import { OFTMsgCodec } from "./libs/OFTMsgCodec.sol";
-import { OFTComposeMsgCodec } from "./libs/OFTComposeMsgCodec.sol";
-
-/**
- * @title OFTCoreUpgradeable
- * @dev Abstract contract for the OftChain (OFT) token.
- */
 library OFTCoreStorage {
 
     struct Layout {

@@ -4,11 +4,11 @@ pragma solidity ^0.8.20;
 
 import { AddressCast } from "../../protocol/libs/AddressCast.sol";
 
-import { OAppUpgradeable } from "./OAppUpgradeable.sol";
+import { OApp } from "./OApp.sol";
 
-abstract contract OAppReadUpgradeable is OAppUpgradeable {
+abstract contract OAppRead is OApp {
 
-    function __OAppRead_init(address _endpoint, address _delegate) internal onlyInitializing {
+    function __OAppRead_init(address _endpoint, address _delegate) internal {
         __OApp_init(_endpoint, _delegate);
     }
 

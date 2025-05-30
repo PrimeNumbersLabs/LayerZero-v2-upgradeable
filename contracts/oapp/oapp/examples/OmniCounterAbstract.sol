@@ -4,9 +4,11 @@ pragma solidity ^0.8.20;
 
 import { ILayerZeroEndpointV2, MessagingFee, MessagingReceipt, Origin } from "../../../protocol/interfaces/ILayerZeroEndpointV2.sol";
 import { ILayerZeroComposer } from "../../../protocol/interfaces/ILayerZeroComposer.sol";
-import { OAppUpgradeable } from "../OAppUpgradeable.sol";
+import { OApp } from "../OApp.sol";
 import { OptionsBuilder } from "../libs/OptionsBuilder.sol";
-import { OAppPreCrimeSimulatorUpgradeable } from "../../precrime/OAppPreCrimeSimulatorUpgradeable.sol";
+import { OAppPreCrimeSimulator } from "../../precrime/OAppPreCrimeSimulator.sol";
+import { OAppCoreStorage } from "../libs/OAppCoreStorage.sol";
+import { OmniCounterAbstractStorage } from "../libs/OmniCounterAbstractStorage.sol";
 
 library MsgCodec {
     uint8 internal constant VANILLA_TYPE = 1;
@@ -40,83 +42,64 @@ library MsgCodec {
 }
 
 // @dev declared as abstract to provide backwards compatibility with Oz5/Oz4
-abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OAppPreCrimeSimulatorUpgradeable {
+abstract contract OmniCounterAbstract is ILayerZeroComposer, OApp, OAppPreCrimeSimulator {
+    using OAppCoreStorage for OAppCoreStorage.Layout;
+    using OmniCounterAbstractStorage for OmniCounterAbstractStorage.Layout;
     using MsgCodec for bytes;
     using OptionsBuilder for bytes;
 
-    struct OmniCounterAbstractStorage {
-        uint256 count;
-        uint256 composedCount;
-        address admin;
-        uint32 eid;
-        mapping(uint32 srcEid => mapping(bytes32 sender => uint64 nonce)) maxReceivedNonce;
-        bool orderedNonce;
-        // for global assertions
-        mapping(uint32 srcEid => uint256 count) inboundCount;
-        mapping(uint32 dstEid => uint256 count) outboundCount;
-    }
-
-    // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.omnicounterabstract")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant OmniCounterAbstractStorageLocation = 0x077b97a8aca79405ec58163a260b303a7e7903026c7db58eeb101ceece6c4900;
-
-    function _getOmniCounterAbstractStorage() internal pure returns (OmniCounterAbstractStorage storage ds) {
-        assembly {
-            ds.slot := OmniCounterAbstractStorageLocation
-        }
-    }
-
-    function __OmniCounterAbstract_init(address _endpoint, address _delegate) internal onlyInitializing {
+    function __OmniCounterAbstract_init(address _endpoint, address _delegate) internal {
         __OApp_init(_endpoint, _delegate);
         __OAppPreCrimeSimulator_init();
         __OmniCounterAbstract_init_unchained(_endpoint);
     }
 
-    function __OmniCounterAbstract_init_unchained(address _endpoint) internal onlyInitializing {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+    function __OmniCounterAbstract_init_unchained(address _endpoint) internal {
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         $.admin = msg.sender;
         $.eid = ILayerZeroEndpointV2(_endpoint).eid();
     }
 
     modifier onlyAdmin() {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         require(msg.sender == $.admin, "only admin");
         _;
     }
 
     function inboundCount(uint32 _srcEid) external view returns (uint256) {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         return $.inboundCount[_srcEid];
     }
 
     function outboundCount(uint32 _dstEid) external view returns (uint256) {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         return $.outboundCount[_dstEid];
     }
 
     function count() external view returns (uint256) {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         return $.count;
     }
 
     function composedCount() external view returns (uint256) {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         return $.composedCount;
     }
 
     function admin() external view returns (address) {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         return $.admin;
     }
 
     function eid() external view returns (uint32) {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         return $.eid;
     }
 
     // -------------------------------
     // Only Admin
     function setAdmin(address _admin) external onlyAdmin {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         $.admin = _admin;
     }
 
@@ -128,7 +111,7 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
     // -------------------------------
     // Send
     function increment(uint32 _eid, uint8 _type, bytes calldata _options) external payable {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         //        bytes memory options = combineOptions(_eid, _type, _options);
         _lzSend(_eid, MsgCodec.encode(_type, $.eid), _options, MessagingFee(msg.value, 0), payable(msg.sender));
         _incrementOutbound(_eid);
@@ -137,7 +120,7 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
     // this is a broken function to skip incrementing outbound count
     // so that preCrime will fail
     function brokenIncrement(uint32 _eid, uint8 _type, bytes calldata _options) external payable onlyAdmin {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         //        bytes memory options = combineOptions(_eid, _type, _options);
         _lzSend(_eid, MsgCodec.encode(_type, $.eid), _options, MessagingFee(msg.value, 0), payable(msg.sender));
         // _incrementOutbound(_eid); // mock method which intentionally does not increment outboundCount to cause a PreCrime Crime
@@ -149,7 +132,7 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
         bytes[] calldata _options
     ) external payable {
         require(_eids.length == _options.length && _eids.length == _types.length, "OmniCounter: length mismatch");
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         MessagingReceipt memory receipt;
         uint256 providedFee = msg.value;
         for (uint256 i = 0; i < _eids.length; i++) {
@@ -176,7 +159,7 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
         uint8 _type,
         bytes calldata _options
     ) public view returns (uint256 nativeFee, uint256 lzTokenFee) {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         //        bytes memory options = combineOptions(_eid, _type, _options);
         MessagingFee memory fee = _quote(_eid, MsgCodec.encode(_type, $.eid), _options, false);
         return (fee.nativeFee, fee.lzTokenFee);
@@ -204,8 +187,8 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
     ) internal override {
         _acceptNonce(_origin.srcEid, _origin.sender, _origin.nonce);
         uint8 messageType = _message.msgType();
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
-        OAppCoreStorage storage oApp$ = _getOAppCoreStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
+        OAppCoreStorage.Layout storage oApp$ = OAppCoreStorage.layout();
         if (messageType == MsgCodec.VANILLA_TYPE) {
             $.count++;
 
@@ -243,12 +226,12 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
     }
 
     function _incrementInbound(uint32 _srcEid) internal {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         $.inboundCount[_srcEid]++;
     }
 
     function _incrementOutbound(uint32 _dstEid) internal {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         $.outboundCount[_dstEid]++;
     }
 
@@ -259,10 +242,10 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
         address,
         bytes calldata
     ) external payable override {
-        OAppCoreStorage storage oApp$ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage oApp$ = OAppCoreStorage.layout();
         require(_oApp == address(this), "!oApp");
         require(msg.sender == address(oApp$.endpoint), "!endpoint");
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         
         uint8 msgType = _message.msgType();
         if (msgType == MsgCodec.COMPOSED_TYPE) {
@@ -291,12 +274,12 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
     // normally an app should decide ordered or not on contract construction
     // this is just a demo
     function setOrderedNonce(bool _orderedNonce) external onlyOwner {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         $.orderedNonce = _orderedNonce;
     }
 
     function _acceptNonce(uint32 _srcEid, bytes32 _sender, uint64 _nonce) internal virtual {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         mapping(uint32 => mapping(bytes32 => uint64)) storage maxReceivedNonce = $.maxReceivedNonce;
 
         uint64 currentNonce = maxReceivedNonce[_srcEid][_sender];
@@ -310,7 +293,7 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
     }
 
     function nextNonce(uint32 _srcEid, bytes32 _sender) public view virtual override returns (uint64) {
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         mapping(uint32 => mapping(bytes32 => uint64)) storage maxReceivedNonce = $.maxReceivedNonce;
         if ($.orderedNonce) {
             return maxReceivedNonce[_srcEid][_sender] + 1;
@@ -322,17 +305,17 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
     // TODO should override oApp version with added ordered nonce increment
     // a governance function to skip nonce
     function skipInboundNonce(uint32 _srcEid, bytes32 _sender, uint64 _nonce) public virtual onlyOwner {
-        OAppCoreStorage storage oApp$ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage oApp$ = OAppCoreStorage.layout();
         oApp$.endpoint.skip(address(this), _srcEid, _sender, _nonce);
 
-        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OmniCounterAbstractStorage.Layout storage $ = OmniCounterAbstractStorage.layout();
         if ($.orderedNonce) {
             $.maxReceivedNonce[_srcEid][_sender]++;
         }
     }
 
     function isPeer(uint32 _eid, bytes32 _peer) public view override returns (bool) {
-        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        OAppCoreStorage.Layout storage $ = OAppCoreStorage.layout();
         return $.peers[_eid] == _peer;
     }
 

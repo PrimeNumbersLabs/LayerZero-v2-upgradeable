@@ -2,23 +2,23 @@
 
 pragma solidity ^0.8.20;
 
-import { PreCrimeUpgradeable, PreCrimePeer } from "../../precrime/PreCrimeUpgradeable.sol";
+import { PreCrime, PreCrimePeer } from "../../precrime/PreCrime.sol";
 import { InboundPacket } from "../../precrime/libs/Packet.sol";
 import { OmniCounter } from "./OmniCounter.sol";
+import { PreCrimeStorage } from "../../precrime/libs/PreCrimeStorage.sol";
 
-contract OmniCounterPreCrimeUpgradeable is PreCrimeUpgradeable {
+contract OmniCounterPreCrime is PreCrime {
+    using PreCrimeStorage for PreCrimeStorage.Layout;
     struct ChainCount {
         uint32 remoteEid;
         uint256 inboundCount;
         uint256 outboundCount;
     }
 
-    constructor(address _endpoint, address _counter) PreCrimeUpgradeable(_endpoint, _counter) {}
-
     function buildSimulationResult() external view override returns (bytes memory) {
-        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
         PreCrimePeer[] memory preCrimePeers = $.preCrimePeers;
-        address payable payableSimulator = payable(simulator);
+        address payable payableSimulator = payable($.simulator);
         OmniCounter counter = OmniCounter(payableSimulator);
         uint256 length = preCrimePeers.length;
         ChainCount[] memory chainCounts = new ChainCount[](length);
@@ -72,7 +72,7 @@ contract OmniCounterPreCrimeUpgradeable is PreCrimeUpgradeable {
     function _getPreCrimePeers(
         InboundPacket[] memory _packets
     ) internal view override returns (PreCrimePeer[] memory peers) {
-        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        PreCrimeStorage.Layout storage $ = PreCrimeStorage.layout();
         PreCrimePeer[] memory allPeers = $.preCrimePeers;
         PreCrimePeer[] memory peersTmp = new PreCrimePeer[](allPeers.length);
 
